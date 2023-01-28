@@ -2,6 +2,8 @@ from builtins import range
 from builtins import object
 import numpy as np
 from past.builtins import xrange
+import math
+import scipy
 
 
 class KNearestNeighbor(object):
@@ -77,7 +79,7 @@ class KNearestNeighbor(object):
                 #####################################################################
                 # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-                pass
+                dists[i][j] = np.sum(np.square(X[i] - self.X_train[j]))
 
                 # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         return dists
@@ -101,7 +103,7 @@ class KNearestNeighbor(object):
             #######################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-            pass
+            dists[i] = np.sum(np.square(X[i] - self.X_train), axis=1)
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         return dists
@@ -131,7 +133,11 @@ class KNearestNeighbor(object):
         #########################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        # l2 = sum((a-b)^2)
+        # (a-b)^2 = a^2 - 2ab + b^2
+        dists = -2 * np.matmul(X, self.X_train.T)
+        dists += np.sum(np.square(X), axis=1, keepdims=True)
+        dists += np.sum(np.square(self.X_train), axis=1)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         return dists
@@ -164,7 +170,9 @@ class KNearestNeighbor(object):
             #########################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-            pass
+            indices = np.argsort(dists[i])
+            for k1 in range(k):
+                closest_y.append(self.y_train[indices[k1]])
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
             #########################################################################
@@ -176,7 +184,7 @@ class KNearestNeighbor(object):
             #########################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-            pass
+            y_pred[i] = scipy.stats.mode(closest_y, keepdims=False).mode
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
