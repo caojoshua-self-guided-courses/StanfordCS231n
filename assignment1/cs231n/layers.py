@@ -778,8 +778,9 @@ def svm_loss(x, y):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    correct_class_scores = x[np.arange(len(x)), y, np.newaxis]
-    margins = x - correct_class_scores + 1
+    x_stable = x - np.max(x)
+    correct_class_scores = x_stable[np.arange(len(x)), y, np.newaxis]
+    margins = x_stable - correct_class_scores + 1
     margins[np.arange(len(margins)), y] = 0
     margins = np.maximum(margins, 0)
     loss = np.sum(margins)
@@ -820,9 +821,10 @@ def softmax_loss(x, y):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    exp_scores = np.exp(x)
+    x_stable = x - np.max(x)
+    exp_scores = np.exp(x_stable)
     exp_sum = np.sum(exp_scores, axis = 1)
-    correct_scores = x[np.arange(len(x)), y]
+    correct_scores = x_stable[np.arange(len(x)), y]
     loss = np.sum(-correct_scores + np.log(exp_sum))
 
     normalized_prob = exp_scores / exp_sum[:, np.newaxis]

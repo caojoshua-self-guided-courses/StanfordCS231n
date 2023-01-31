@@ -93,8 +93,9 @@ class TwoLayerNet(object):
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
         z1, cache1 = affine_forward(X, self.params['W1'], self.params['b1'])
-        z2, cache2 = affine_forward(z1, self.params['W2'], self.params['b2'])
-        scores = z2
+        z2, cache2 = relu_forward(z1)
+        z3, cache3 = affine_forward(z2, self.params['W2'], self.params['b2'])
+        scores = z3
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -118,17 +119,18 @@ class TwoLayerNet(object):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        loss, dx = softmax_loss(z2, y)
+        loss, dx = softmax_loss(z3, y)
         weights_squared = np.sum(self.params['W1'] ** 2) + np.sum(self.params['W2'] ** 2)
         loss += 0.5 * self.reg * weights_squared
 
-        dx, dw, db = affine_backward(dx, cache2)
-        dw += self.reg * self.params['W2']
-        grads['W2'] = dw
+        dx, dw, db = affine_backward(dx, cache3)
+        # dw += self.reg * self.params['W2']
+        grads['W2'] = dw + self.reg * self.params['W2']
         grads['b2'] = db
+        dx = relu_backward(dx, cache2)
         dx, dw, db = affine_backward(dx, cache1)
-        dw += self.reg * self.params['W1']
-        grads['W1'] = dw
+        # dw += self.reg * self.params['W1']
+        grads['W1'] = dw + self.reg * self.params['W1']
         grads['b1'] = db
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
