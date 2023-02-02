@@ -124,12 +124,10 @@ class TwoLayerNet(object):
         loss += 0.5 * self.reg * weights_squared
 
         dx, dw, db = affine_backward(dx, cache3)
-        # dw += self.reg * self.params['W2']
         grads['W2'] = dw + self.reg * self.params['W2']
         grads['b2'] = db
         dx = relu_backward(dx, cache2)
         dx, dw, db = affine_backward(dx, cache1)
-        # dw += self.reg * self.params['W1']
         grads['W1'] = dw + self.reg * self.params['W1']
         grads['b1'] = db
 

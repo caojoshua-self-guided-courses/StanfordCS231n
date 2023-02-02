@@ -74,7 +74,16 @@ class FullyConnectedNet(object):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        self.params = dict()
+        self.params['W1'] = np.random.normal(loc=0, scale=weight_scale, size=(input_dim, hidden_dims[0]))
+        self.params['b1'] = np.zeros(hidden_dims[0])
+        i = 1
+        while i < len(hidden_dims):
+            self.params['W' + str(i + 1)] = np.random.normal(loc=0, scale=weight_scale, size=(hidden_dims[i-1], hidden_dims[i]))
+            self.params['b' + str(i + 1)] = np.zeros(hidden_dims[i])
+            i += 1
+        self.params['W' + str(i + 1)] = np.random.normal(loc=0, scale=weight_scale, size=(hidden_dims[i-1], num_classes))
+        self.params['b' + str(i + 1)] = np.zeros(num_classes)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -107,7 +116,7 @@ class FullyConnectedNet(object):
 
     def loss(self, X, y=None):
         """Compute loss and gradient for the fully connected net.
-        
+
         Inputs:
         - X: Array of input data of shape (N, d_1, ..., d_k)
         - y: Array of labels, of shape (N,). y[i] gives the label for X[i].
@@ -148,7 +157,24 @@ class FullyConnectedNet(object):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        cache = dict()
+        cache['affine'] = list()
+        cache['relu'] = list()
+
+        a, c = affine_forward(X, self.params['W1'], self.params['b1'])
+        cache['affine'].append(c)
+        z, c = relu_forward(a)
+        cache['relu'].append(c)
+        i = 2
+        while i < self.num_layers:
+            a, c = affine_forward(z, self.params['W' + str(i)], self.params['b' + str(i)])
+            cache['affine'].append(c)
+            z, c = relu_forward(a)
+            cache['relu'].append(c)
+            i += 1
+        a, c = affine_forward(z, self.params['W' + str(i)], self.params['b' + str(i)])
+        cache['affine'].append(c)
+        scores = a
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -175,7 +201,25 @@ class FullyConnectedNet(object):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        loss, dx = softmax_loss(a, y)
+        weights_squared = 0
+        layer = self.num_layers - 1
+        dx, dw, db = affine_backward(dx, cache['affine'][layer])
+        n = layer + 1
+        grads['W' + str(n)] = dw + self.reg * self.params['W' + str(n)]
+        grads['b' + str(n)] = db
+        weights_squared += np.sum(self.params['W' + str(layer + 1)] ** 2)
+
+        while layer > 0:
+            layer -= 1
+            dx = relu_backward(dx, cache['relu'][layer])
+            dx, dw, db = affine_backward(dx, cache['affine'][layer])
+            n = layer + 1
+            grads['W' + str(n)] = dw + self.reg * self.params['W' + str(n)]
+            grads['b' + str(n)] = db
+            weights_squared += np.sum(self.params['W' + str(n)] ** 2)
+
+        loss += 0.5 * self.reg * weights_squared
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
