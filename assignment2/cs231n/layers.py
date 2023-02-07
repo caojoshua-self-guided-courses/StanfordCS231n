@@ -233,7 +233,25 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         #######################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        cache = dict()
+        cache['gamma'] = gamma
+        cache['beta'] = beta
+
+        mean = np.mean(x, axis=0)
+        var = np.mean((x - mean) ** 2, axis=0)
+        stddev = np.sqrt(var + eps)
+        xhat = (x - mean) / stddev
+        out = gamma * xhat + beta
+
+        running_mean = running_mean * momentum + mean * (1 - momentum)
+        running_var = running_var * momentum + var * (1 - momentum)
+
+        cache['x'] = x
+        cache['xhat'] = xhat
+        cache['mean'] = mean
+        cache['var'] = var
+        cache['stddev'] = stddev
+        cache['eps'] = eps
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         #######################################################################
@@ -248,7 +266,8 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         #######################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        out = (x - running_mean) / np.sqrt(running_var + eps)
+        out = gamma * out + beta
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         #######################################################################
@@ -289,7 +308,21 @@ def batchnorm_backward(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    N = dout.shape[0]
+
+    x_centered = cache['x'] - cache['mean']
+
+    # dx computation seems a little intimidating, but the paper writes out the gradient for us
+    # I think I was supposed to do this with the 'computation graph', but I
+    # just wrote out the symbolic gradient.
+    dxhat = dout * cache['gamma']
+    dstddev = np.sum(dxhat * x_centered, axis=0) * (-1/2) * (cache['var'] + cache['eps']) ** (-3/2)
+    dmean = np.sum(dxhat * -1 / cache['stddev'], axis=0)
+    dmean += dstddev * -2 * np.sum(x_centered, axis=0) / N
+    dx = dxhat / cache['stddev'] + dstddev * 2 * x_centered / N + dmean / N
+
+    dgamma = np.sum(dout * cache['xhat'], axis=0)
+    dbeta = np.sum(dout, axis=0)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -323,7 +356,15 @@ def batchnorm_backward_alt(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    xhat = cache['xhat']
+    dgamma = np.sum(dout * xhat, axis=0)
+    dbeta = np.sum(dout, axis=0)
+
+    # These are the gradients from the paper after simplification.
+    m = dout.shape[0]
+    dxhat = dout * cache['gamma']
+    dx = dxhat / m / cache['stddev']
+    dx = dx * m - np.sum(dx, axis=0) - np.sum(dx * xhat, axis=0) * xhat
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -368,7 +409,22 @@ def layernorm_forward(x, gamma, beta, ln_param):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    cache = dict()
+    cache['gamma'] = gamma
+    cache['beta'] = beta
+
+    mean = np.mean(x, axis=1, keepdims=True)
+    var = np.mean((x - mean) ** 2, axis=1, keepdims=True)
+    stddev = np.sqrt(var + eps)
+    xhat = (x - mean) / stddev
+    out = gamma * xhat + beta
+
+    cache['x'] = x
+    cache['xhat'] = xhat
+    cache['mean'] = mean
+    cache['var'] = var
+    cache['stddev'] = stddev
+    cache['eps'] = eps
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -402,7 +458,14 @@ def layernorm_backward(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    xhat = cache['xhat']
+    dgamma = np.sum(dout * xhat, axis=0)
+    dbeta = np.sum(dout, axis=0)
+
+    m = dout.shape[1]
+    dxhat = dout * cache['gamma']
+    dx = dxhat / m / cache['stddev']
+    dx = dx * m - np.sum(dx, axis=1, keepdims=True) - np.sum(dx * xhat, axis=1, keepdims=True) * xhat
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
