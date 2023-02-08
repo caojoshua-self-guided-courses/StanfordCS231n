@@ -165,6 +165,7 @@ class FullyConnectedNet(object):
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
         norm = self.normalization != None
+        dropout = self.use_dropout
         norm_forward = batchnorm_forward
         norm_backward = batchnorm_backward_alt
         if self.normalization == "layernorm":
@@ -175,25 +176,32 @@ class FullyConnectedNet(object):
         cache['affine'] = list()
         cache['norm'] = list()
         cache['relu'] = list()
+        cache['dropout'] = list()
 
         a, c = affine_forward(X, self.params['W1'], self.params['b1'])
         cache['affine'].append(c)
         if norm:
             a, c = norm_forward(a, self.params['gamma1'], self.params['beta1'], self.bn_params[0])
             cache['norm'].append(c)
-        z, c = relu_forward(a)
+        a, c = relu_forward(a)
         cache['relu'].append(c)
+        if dropout:
+            a, c = dropout_forward(a, self.dropout_param)
+            cache['dropout'].append(c)
         i = 2
         while i < self.num_layers:
-            a, c = affine_forward(z, self.params['W' + str(i)], self.params['b' + str(i)])
+            a, c = affine_forward(a, self.params['W' + str(i)], self.params['b' + str(i)])
             cache['affine'].append(c)
             if norm:
                 a, c = norm_forward(a, self.params['gamma' + str(i)], self.params['beta' + str(i)], self.bn_params[i - 1])
                 cache['norm'].append(c)
-            z, c = relu_forward(a)
+            a, c = relu_forward(a)
             cache['relu'].append(c)
+            if dropout:
+                a, c = dropout_forward(a, self.dropout_param)
+                cache['dropout'].append(c)
             i += 1
-        a, c = affine_forward(z, self.params['W' + str(i)], self.params['b' + str(i)])
+        a, c = affine_forward(a, self.params['W' + str(i)], self.params['b' + str(i)])
         cache['affine'].append(c)
         scores = a
 
@@ -234,6 +242,8 @@ class FullyConnectedNet(object):
         while layer > 0:
             n = layer
             layer -= 1
+            if dropout:
+                dx = dropout_backward(dx, cache['dropout'][layer])
             dx = relu_backward(dx, cache['relu'][layer])
             if norm:
                 dx, dgamma, dbeta = norm_backward(dx, cache['norm'][layer])
