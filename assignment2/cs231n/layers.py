@@ -241,6 +241,7 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         var = np.mean((x - mean) ** 2, axis=0)
         stddev = np.sqrt(var + eps)
         xhat = (x - mean) / stddev
+        # out = gamma[:,np.newaxis] * xhat + beta[:,np.newaxis]
         out = gamma * xhat + beta
 
         running_mean = running_mean * momentum + mean * (1 - momentum)
@@ -798,7 +799,11 @@ def spatial_batchnorm_forward(x, gamma, beta, bn_param):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    # make the Channel axis the last axis
+    swap = np.swapaxes(x, 1, 3)
+    orig_shape = swap.shape
+    out, cache = batchnorm_forward(np.reshape(swap, (-1, swap.shape[3])), gamma, beta, bn_param)
+    out = np.swapaxes(out.reshape(orig_shape), 1, 3)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -831,7 +836,10 @@ def spatial_batchnorm_backward(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    swap = np.swapaxes(dout, 1, 3)
+    orig_shape = swap.shape
+    dx, dgamma, dbeta = batchnorm_backward_alt(np.reshape(swap, (-1, swap.shape[3])), cache)
+    dx = np.swapaxes(dx.reshape(orig_shape), 1, 3)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -872,7 +880,22 @@ def spatial_groupnorm_forward(x, gamma, beta, G, gn_param):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    C = x.shape[1]
+    assert C % G == 0, "G must be a divisor of C"
+
+    x_reshape = np.reshape(x, (x.shape[0], G, -1))
+    mean = np.mean(x_reshape, axis=2, keepdims=True)
+    var = np.mean((x_reshape - mean) ** 2, axis=2, keepdims=True)
+    stddev = np.sqrt(var + eps)
+    xhat = (x_reshape - mean) / stddev
+    out = gamma * np.reshape(xhat, x.shape) + beta
+
+    cache = dict()
+    cache['gamma'] = gamma
+    cache['x'] = x
+    cache['xhat'] = xhat
+    cache['mean'] = mean
+    cache['stddev'] = stddev
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -901,7 +924,18 @@ def spatial_groupnorm_backward(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    # xhat is of shape (N, G, ...) where `...` is the data points we are normalizing over
+    x, xhat, gamma, stddev = cache['x'], cache['xhat'], cache['gamma'], cache['stddev']
+    m = xhat.shape[2]
+
+    dgamma = np.sum(dout * np.reshape(xhat, x.shape), axis=(0, 2, 3), keepdims=True)
+    dbeta = np.sum(dout, axis=(0, 2, 3), keepdims=True)
+
+    dxhat = np.reshape(dout * gamma, xhat.shape)
+    dx = dxhat / m / stddev
+    dx = dx * m - np.sum(dx, axis=2, keepdims=True) - np.sum(dx * xhat, axis=2, keepdims=True) * xhat
+    dx = np.reshape(dx, x.shape)
+
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
