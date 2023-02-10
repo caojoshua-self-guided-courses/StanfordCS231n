@@ -598,13 +598,33 @@ def conv_forward_naive(x, w, b, conv_param):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    stride, pad = conv_param.values()
+
+    N, C, H, W = x.shape
+    F, _, HH, WW = w.shape
+
+    new_height = 1 + (H + 2 * pad - HH) // stride
+    new_width = 1 + (W + 2 * pad - WW) // stride
+
+    out = np.zeros((N, F, new_height, new_width))
+
+    padx = np.pad(x, ((0, 0), (0, 0), (pad, pad), (pad, pad)))
+
+    for n in range(N):
+        for filter in range(F):
+            for channel in range(C):
+                for i in range(new_height):
+                    orig_i = i * stride
+                    for j in range(new_width):
+                        orig_j = j * stride
+                        out[n][filter][i][j] += np.sum(padx[n][channel][orig_i:orig_i+HH, orig_j:orig_j+WW] * w[filter][channel])
+            out[n][filter] += b[filter]
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
-    cache = (x, w, b, conv_param)
+    cache = (x, w, b, conv_param, padx)
     return out, cache
 
 
@@ -626,7 +646,29 @@ def conv_backward_naive(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    print(dout.shape)
+    (_, w, _, conv_param, padx) = cache
+    stride, pad = conv_param.values()
+
+    N, F, H, W = dout.shape
+    C = padx.shape[1]
+    F, _, HH, WW = w.shape
+
+    dpadx = np.zeros(padx.shape)
+    dw = np.zeros(w.shape)
+
+    for filter in range(F):
+        for n in range(N):
+            for channel in range(C):
+                for i in range(H):
+                    orig_i = i * stride
+                    for j in range(W):
+                        orig_j = j * stride
+                        dw[filter][channel] += padx[n][channel][orig_i:orig_i+HH, orig_j:orig_j+WW] * dout[n][filter][i][j]
+                        dpadx[n][channel][orig_i:orig_i+HH, orig_j:orig_j+WW] += w[filter][channel] * dout[n][filter][i][j]
+    dx = dpadx[:, : , pad:-pad, pad:-pad]
+
+    db = np.sum(dout, axis=(0,2,3))
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -661,7 +703,21 @@ def max_pool_forward_naive(x, pool_param):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    N, C, H, W = x.shape
+    pool_height, pool_width, stride = pool_param.values()
+
+    new_height = 1 + (H - pool_height) // stride
+    new_width = 1 + (W - pool_width) // stride
+
+    out = np.zeros((N, C, new_height, new_width))
+
+    for n in range(N):
+        for c in range(C):
+            for i in range(new_height):
+                orig_i = i * stride
+                for j in range(new_width):
+                    orig_j = j * stride
+                    out[n][c][i][j] = np.max(x[n][c][orig_i:orig_i+pool_height, orig_j:orig_j+pool_width])
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -687,7 +743,21 @@ def max_pool_backward_naive(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    N, F, H, W = dout.shape
+    x, pool_param = cache
+    pool_height, pool_width, stride = pool_param.values()
+
+    dx = np.zeros(x.shape)
+
+    for n in range(N):
+        for filter in range(F):
+            for i in range(H):
+                orig_i = i * stride
+                for j in range(W):
+                    orig_j = j * stride
+                    pool = x[n][filter][orig_i:orig_i+pool_height, orig_j:orig_j+pool_width]
+                    dx_pool = dx[n][filter][orig_i:orig_i+pool_height, orig_j:orig_j+pool_width]
+                    dx_pool += np.where(pool == np.max(pool), dout[n][filter][i][j], 0)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
