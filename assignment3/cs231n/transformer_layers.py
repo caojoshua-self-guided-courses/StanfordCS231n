@@ -38,7 +38,15 @@ class PositionalEncoding(nn.Module):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        # pe = torch.zeros(1, max_len)
+
+        dim_range = torch.arange(embed_dim)
+        pe[:,:] = 10000 ** (-(dim_range - (dim_range % 2)) / embed_dim)
+        pe[:] *= torch.arange(max_len)[:,None]
+        # `sin` the evens
+        pe[:,:,::2] = torch.sin(pe[:,:,::2])
+        # `cos` the odds
+        pe[:,:,1::2] = torch.cos(pe[:,:,1::2])
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -70,7 +78,8 @@ class PositionalEncoding(nn.Module):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        output = x + self.pe[:,:S]
+        output = self.dropout(output)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -117,7 +126,7 @@ class MultiHeadAttention(nn.Module):
         self.query = nn.Linear(embed_dim, embed_dim)
         self.value = nn.Linear(embed_dim, embed_dim)
         self.proj = nn.Linear(embed_dim, embed_dim)
-        
+
         self.attn_drop = nn.Dropout(dropout)
 
         self.n_head = num_heads
@@ -165,7 +174,31 @@ class MultiHeadAttention(nn.Module):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        H = self.n_head
+
+        query = self.query(query)
+        key = self.key(key)
+        value = self.value(value)
+
+        query = torch.reshape(query, (N, S, H, E//H))
+        key = torch.reshape(key, (N, T, H, E//H))
+        value = torch.reshape(value, (N, T, H, E//H))
+        query = torch.permute(query, (0, 2, 1, 3))
+        key = torch.permute(key, (0, 2, 1, 3))
+        value = torch.permute(value, (0, 2, 1, 3))
+
+        # alignment and attention are shape (N, H, S, T)
+        alignment = torch.matmul(query, torch.permute(key, (0, 1, 3, 2))) / math.sqrt(self.head_dim)
+        if attn_mask is not None:
+            alignment = torch.masked_fill(alignment, ~attn_mask, -math.inf)
+        attention = torch.softmax(alignment, dim=-1)
+        attention = self.attn_drop(attention)
+
+        # output is shape (N, H, S, E//H)
+        output = torch.matmul(attention, value)
+        output = torch.permute(output, (0, 2, 1, 3))
+        output = torch.reshape(output, shape=(N, S, E))
+        output = self.proj(output)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
