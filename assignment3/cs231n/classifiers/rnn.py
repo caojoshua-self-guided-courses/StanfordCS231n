@@ -148,17 +148,24 @@ class CaptioningRNN:
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
+        sequence_forward = rnn_forward
+        sequence_backward = rnn_backward
+        if self.cell_type == "lstm":
+            sequence_forward = lstm_forward
+            sequence_backward = lstm_backward
+
         h0, cache1 = affine_forward(features, W_proj, b_proj)
         z, cache2 = word_embedding_forward(captions_in, W_embed)
-        z, cache3 = rnn_forward(z, h0, Wx, Wh, b)
+        z, cache3 = sequence_forward(z, h0, Wx, Wh, b)
         z, cache4 = temporal_affine_forward(z, W_vocab, b_vocab)
 
         loss, dx = temporal_softmax_loss(z, captions_out, mask)
 
         dx, grads['W_vocab'], grads['b_vocab'] = temporal_affine_backward(dx, cache4)
-        dx, dh0, grads['Wx'], grads['Wh'], grads['b'] = rnn_backward(dx, cache3)
+        dx, dh0, grads['Wx'], grads['Wh'], grads['b'] = sequence_backward(dx, cache3)
         grads['W_embed'] = word_embedding_backward(dx, cache2)
         _, grads['W_proj'], grads['b_proj'] = affine_backward(dh0, cache1)
+
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
