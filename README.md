@@ -4,6 +4,8 @@ These are my solutions to [Stanford's CS231n](https://cs231n.github.io/). These 
 
 I am going through the assignments and reading some of the course notes. These are not full solutions. I'm skipping some of the non-coding questions in the notebooks that I don't feel like answering, and I am not putting much energy the training related exercieses, resulting in lower validation and test accuracies. I am primarily focusing on better understanding the algorithms.
 
+I provided some of my thoughts on the course in `/notes.md`.
+
 ## Setup
 I am working on these locally, and not on google colab as the course recommends. I have changed the first box in each notebook to download datsets locally.
 
