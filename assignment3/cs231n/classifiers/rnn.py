@@ -233,7 +233,23 @@ class CaptioningRNN:
         ###########################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        H = Wh.shape[0]
+
+        prev_h, _ = affine_forward(features, W_proj, b_proj)
+        prev_c = np.zeros_like(prev_h)
+
+        word = W_embed[self._start]
+        h = np.zeros((N, max_length, H))
+
+        for t in range(1, max_length):
+            if self.cell_type == "rnn":
+                prev_h, _ = rnn_step_forward(word, prev_h, Wx, Wh, b)
+            else:
+                prev_h, prev_c, _ = lstm_step_forward(word, prev_h, prev_c, Wx, Wh, b)
+            h[:,t] = prev_h
+            z, _ = temporal_affine_forward(np.expand_dims(prev_h, axis=1), W_vocab, b_vocab)
+            captions[:,t] = np.argmax(np.squeeze(z), axis=1)
+            word = W_embed[captions[:,t]]
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
